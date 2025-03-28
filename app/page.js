@@ -1,10 +1,34 @@
 "use client";
+
+import dynamic from "next/dynamic";
+
+// Dynamic imports for client-side only components
+const CountUp = dynamic(() => import("react-countup"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
+
+const TypeAnimation = dynamic(
+  () => import("react-type-animation").then((mod) => mod.TypeAnimation),
+  {
+    ssr: false,
+    loading: () => <div>Loading...</div>,
+  }
+);
+
+const RollingGallery = dynamic(() => import("./_components/RollingGallery"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
+
+// Remove the direct imports
+// import CountUp from "react-countup";
+// import { TypeAnimation } from "react-type-animation";
+// import RollingGallery from "./_components/RollingGallery";
+
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import CountUp from "react-countup";
-import { TypeAnimation } from "react-type-animation";
-import RollingGallery from "./_components/RollingGallery";
 import { ArrowBigRightDash } from "lucide-react";
 
 const heroSlides = [
@@ -33,45 +57,50 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const totalScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const currentProgress = (window.scrollY / totalScroll) * 100;
-      setScrollProgress(currentProgress);
-    };
+    if (typeof window !== "undefined") {
+      const handleScroll = () => {
+        const totalScroll =
+          document.documentElement.scrollHeight - window.innerHeight;
+        const currentProgress = (window.scrollY / totalScroll) * 100;
+        setScrollProgress(currentProgress);
+        setShowScrollTop(window.scrollY > 400);
+      };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+      window.addEventListener("scroll", handleScroll);
+      // Initial call to set initial values
+      handleScroll();
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
-    };
+  // Remove the second scroll handler useEffect (we combined it above)
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Add this function inside the Home component
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const [statsKey, setStatsKey] = useState(0);
 
+  // Update statsKey useEffect to be client-side only
   useEffect(() => {
-    const timer = setInterval(() => {
-      setStatsKey((prev) => prev + 1);
-    }, 10000);
-    return () => clearInterval(timer);
+    if (typeof window !== "undefined") {
+      const timer = setInterval(() => {
+        setStatsKey((prev) => prev + 1);
+      }, 10000);
+      return () => clearInterval(timer);
+    }
   }, []);
 
+  // Update slide timer useEffect to be client-side only
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
+    if (typeof window !== "undefined") {
+      const timer = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
   }, []);
 
   return (
@@ -483,7 +512,7 @@ export default function Home() {
       <section className="py-12 bg-purple-800 text-white">
         <div className="container mx-auto px-4">
           <motion.div
-            key={Math.random()} // Forces re-render
+            key={statsKey}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -497,12 +526,16 @@ export default function Home() {
             ].map((stat) => (
               <div key={stat.label}>
                 <h3 className="text-4xl font-bold mb-2">
-                  <CountUp
-                    end={stat.end}
-                    duration={2.5}
-                    suffix="+"
-                    key={Date.now()} // Forces CountUp to restart
-                  />
+                  {typeof window !== "undefined" ? (
+                    <CountUp
+                      end={stat.end}
+                      duration={2.5}
+                      suffix="+"
+                      key={statsKey}
+                    />
+                  ) : (
+                    `${stat.end}+`
+                  )}
                 </h3>
                 <p>{stat.label}</p>
               </div>
